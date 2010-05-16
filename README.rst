@@ -23,9 +23,12 @@ Usage
 =====
 Say we want to encrypt/ decrypt a file named /home/user/sample.txt
 
-1. Generate a keyfile using: run_des.o -g /tmp/keyfile.key
-2. Encrypt sample.txt using: run_des.o -e /tmp/keyfile.key /home/user/sample.txt /home/user/sample.enc
-3. Decrypt sample.txt using: run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt
+1. Generate a keyfile using::
+    run_des.o -g /tmp/keyfile.key
+2. Encrypt sample.txt using::
+    run_des.o -e /tmp/keyfile.key /home/user/sample.txt /home/user/sample.enc
+3. Decrypt sample.txt using::
+    run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt
 
 Don't lose the key file! you won't be able to decrypt an encrypted if you lose the keyfile.
 
@@ -36,18 +39,18 @@ It has been implemented after `J. Orlin Grabbe's DES Algorithm Illustrated <http
 
 It is possible to use this implementation to facilitate TripleDES encryption process:
 
-1. Generate keys using:
-    a. run_des.o -g /tmp/keyfile1.key
-    b. run_des.o -g /tmp/keyfile2.key
-    c. run_des.o -g /tmp/keyfile3.key
-2. Encrypt using:
-    a. run_des.o -e /tmp/keyfile1.key /home/user/sample.txt /home/user/sample.enc1
-    b. run_des.o -e /tmp/keyfile2.key /home/user/sample.enc1 /home/user/sample.enc2
-    c. run_des.o -e /tmp/keyfile3.key /home/user/sample.enc2 /home/user/sample.enc3
-3. Decrypt using: 
-    a. run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3
-    b. run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2
-    c. run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt
+1. Generate keys using::
+    run_des.o -g /tmp/keyfile1.key
+    run_des.o -g /tmp/keyfile2.key
+    run_des.o -g /tmp/keyfile3.key
+2. Encrypt using::
+    run_des.o -e /tmp/keyfile1.key /home/user/sample.txt /home/user/sample.enc1
+    run_des.o -e /tmp/keyfile2.key /home/user/sample.enc1 /home/user/sample.enc2
+    run_des.o -e /tmp/keyfile3.key /home/user/sample.enc2 /home/user/sample.enc3
+3. Decrypt using::
+    run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3
+    run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2
+    run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt
 
 The primary repository for DES is located at: `http://github.com/tarequeh/DES/ <http://github.com/tarequeh/DES/>`_ The blog post
 discussing the implementation can be found at: `CodeXN <http://www.codexn.com>`_
