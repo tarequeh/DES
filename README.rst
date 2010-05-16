@@ -25,7 +25,7 @@ Say we want to encrypt/ decrypt a file named /home/user/sample.txt
 
 1. Generate a keyfile using: run_des.o -g /tmp/keyfile.key
 2. Encrypt sample.txt using: run_des.o -e /tmp/keyfile.key /home/user/sample.txt /home/user/sample.enc
-2. Decrypt sample.txt using: run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt
+3. Decrypt sample.txt using: run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt
 
 Don't lose the key file! you won't be able to decrypt an encrypted if you lose the keyfile.
 
@@ -35,9 +35,10 @@ DES is provided for educational purposes only. Do not use for any other reason.
 It has been implemented after `J. Orlin Grabbe's DES Algorithm Illustrated <http://orlingrabbe.com/des.htm>`_
 
 It is possible to use this implementation to facilitate TripleDES encryption process:
+
 1. run_des.o -g /tmp/keyfile1.key; run_des.o -g /tmp/keyfile2.key; run_des.o -g /tmp/keyfile3.key
 2. run_des.o -e /tmp/keyfile1.key /home/user/sample.txt /home/user/sample.enc1; run_des.o -e /tmp/keyfile2.key /home/user/sample.enc1 /home/user/sample.enc2; run_des.o -e /tmp/keyfile3.key /home/user/sample.enc2 /home/user/sample.enc3;
-2. run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3; run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2; run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt; 
+3. run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3; run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2; run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt; 
 
 The primary repository for DES is located at: `http://github.com/tarequeh/des/ <http://github.com/tarequeh/des/>`_
 This implementation of DES was written by `Tareque Hossain <mailto:tareque@codexn.com>`_
