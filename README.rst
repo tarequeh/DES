@@ -5,19 +5,19 @@ C implementation of Data Encryption Standard algorithm.
 
 Overview
 ========
-The Data Encryption Standard (DES) is a block cipher (a form of shared secret encryption) that was selected by the National 
-Bureau of Standards as an official Federal Information Processing Standard (FIPS) for the United States in 1976 and which 
+The Data Encryption Standard (DES) is a block cipher (a form of shared secret encryption) that was selected by the National
+Bureau of Standards as an official Federal Information Processing Standard (FIPS) for the United States in 1976 and which
 has subsequently enjoyed widespread use internationally. It is based on a symmetric-key algorithm that uses a 56-bit key.
 
-This implementation of DES is not optimized in any way. The code has been written to provide readability and easy 
+This implementation of DES is not optimized in any way. The code has been written to provide readability and easy
 understanding of the algorithm. Padding scheme used in this implementation is `[PKCS5] <ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-5v2/pkcs5v2-0.pdf>`_
 
 Compilation & Installation
 ==========================
 This implementation has only been tested on Unix platform. But you may be able to compile/ run it on Windows.
 
-1. Make sure des.c, des.h and run_des.c are in the same directory 
-2. Compile using: gcc -O3 des.c run_des.c -o run_des.o   
+1. Make sure des.cpp, des.h and run_des.cpp are in the same directory
+2. Compile using: g++ -O3 des.cpp run_des.cpp -o run_des.o
 
 Usage
 =====
