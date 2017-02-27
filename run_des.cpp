@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <vector>
+#include <pthread.h>
 
 /*
  * des.h provides the following functions and constants:
@@ -11,6 +13,7 @@
  */
 #include "des.h"
 
+using namespace std;
 // Declare file handlers
 static FILE *key_file, *input_file, *output_file;
 
@@ -22,11 +25,14 @@ static FILE *key_file, *input_file, *output_file;
 // DES key is 8 bytes long
 #define DES_KEY_SIZE 8
 
+#define ucharmalloc (unsigned char*) malloc(8*sizeof(char))
+
 int main(int argc, char* argv[]) {
 	clock_t start, finish;
 	double time_taken;
 	unsigned long file_size;
 	unsigned short int padding;
+	int nThread = 2;
 
 	if (argc < 2) {
 		printf("You must provide at least 1 parameter, where you specify the action.");
@@ -129,39 +135,44 @@ int main(int argc, char* argv[]) {
 		start = clock();
 
 		// Start reading input file, process and write to output file
-		while(fread(data_block, 1, 8, input_file)) {
-			block_count++;
-			if (block_count == number_of_blocks) {
-				if (process_mode == ENCRYPTION_MODE) {
-					padding = 8 - file_size%8;
-					if (padding < 8) { // Fill empty data block bytes with padding
-						memset((data_block + 8 - padding), (unsigned char)padding, padding);
-					}
-
-					process_message(data_block, processed_block, key_sets, process_mode);
-					bytes_written = fwrite(processed_block, 1, 8, output_file);
-
-					if (padding == 8) { // Write an extra block for padding
-						memset(data_block, (unsigned char)padding, 8);
-						process_message(data_block, processed_block, key_sets, process_mode);
-						bytes_written = fwrite(processed_block, 1, 8, output_file);
-					}
-				} else {
-					process_message(data_block, processed_block, key_sets, process_mode);
-					padding = processed_block[7];
-
-					if (padding < 8) {
-						bytes_written = fwrite(processed_block, 1, 8 - padding, output_file);
-					}
-				}
-			} else {
-				process_message(data_block, processed_block, key_sets, process_mode);
-				bytes_written = fwrite(processed_block, 1, 8, output_file);
-			}
-			memset(data_block, 0, 8);
+		vector<unsigned char*>::iterator it;
+		vector<unsigned char*> output;
+		vector<unsigned char*> input;
+		for (block_count = 0; block_count < number_of_blocks; block_count++) {
+			input.push_back(ucharmalloc);
+			fread(input.back(), 1, 8, input_file);
 		}
 
+		// TODO: multi-thread
+		clock_t start_convert = clock();
+		for (it = input.begin(); it != input.end(); it++) {
+			if (it + 1 == input.end()) {
+				padding = 8 - file_size%8;
+				if (padding < 8) { // Fill empty data block bytes with padding
+					memset((*it + 8 - padding), (unsigned char)padding, padding);
+				}
+			}
+			output.push_back(ucharmalloc);
+			process_message(*it, output.back(), key_sets, process_mode);
+		}
+		clock_t end_convert = clock();
+		double time_convert_taken = (double)(end_convert - start_convert)/(double)CLOCKS_PER_SEC;
+		printf("[%lf seconds]\n", time_convert_taken);
+		// TODO: end multi-thread
+
+		for (it = output.begin(); it != output.end(); ++it) {
+			bytes_written = fwrite(*it, 1, 8, output_file);
+			delete *it;
+		}
+		for (it = input.begin(); it != input.end(); ++it) {
+			delete *it;
+		}
+		input.clear();
+		output.clear();
+
 		finish = clock();
+		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
+		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 
 		// Free up memory
 		free(des_key);
