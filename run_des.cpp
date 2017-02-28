@@ -61,7 +61,6 @@ int main(int argc, char* argv[]) {
 	clock_t start, finish;
 	double time_taken;
 
-	start = clock();
 	if (argc < 2) {
 		printf("You must provide at least 1 parameter, where you specify the action.");
 		return 1;
@@ -139,7 +138,7 @@ int main(int argc, char* argv[]) {
 		unsigned char* data_block = (unsigned char*) malloc(8*sizeof(char));
 		unsigned char* processed_block = (unsigned char*) malloc(8*sizeof(char));
 
-		// start = clock();
+		start = clock();
 		generate_sub_keys(des_key, key_sets);
 		finish = clock();
 		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
@@ -209,8 +208,9 @@ int main(int argc, char* argv[]) {
 			output[i].clear();
 		}
 
-		// time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
-		// printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
+		finish = clock();
+		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
+		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 
 		// Free up memory
 		free(des_key);
@@ -218,12 +218,8 @@ int main(int argc, char* argv[]) {
 		free(processed_block);
 		fclose(input_file);
 		fclose(output_file);
-
-		// Provide feedback
-		finish = clock();
-		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
-		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 		pthread_exit(NULL);
+		// Provide feedback
 		return 0;
 	} else {
 		printf("Invalid action: %s. First parameter must be [ -g | -e | -d ].", argv[1]);
