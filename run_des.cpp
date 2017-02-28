@@ -27,12 +27,39 @@ static FILE *key_file, *input_file, *output_file;
 
 #define ucharmalloc (unsigned char*) malloc(8*sizeof(char))
 
+#define MAX_POSIBLE_THREADS 16
+
+short int process_mode;
+vector<unsigned char*> output[MAX_POSIBLE_THREADS];
+vector<unsigned char*> input[MAX_POSIBLE_THREADS];
+unsigned long file_size;
+key_set* key_sets = (key_set*)malloc(17*sizeof(key_set));
+int nThread = 1;
+
+void *converter(void* index) {
+	clock_t start = clock();
+	long i = (long) index;
+	unsigned short int padding;
+	vector<unsigned char*>::iterator it;
+	for (it = input[i].begin(); it != input[i].end(); it++) {
+		if (it + 1 == input[i].end() && i == nThread - 1) {
+			padding = 8 - file_size%8;
+			if (padding < 8) { // Fill empty data block bytes with padding
+				memset((*it + 8 - padding), (unsigned char)padding, padding);
+			}
+		}
+		output[i].push_back(ucharmalloc);
+		process_message(*it, output[i].back(), key_sets, process_mode);
+	}
+	clock_t finish = clock();
+	double time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
+	printf("thread[%ld] : %lf seconds\n", i, time_taken);
+	pthread_exit(NULL);
+}
+
 int main(int argc, char* argv[]) {
 	clock_t start, finish;
 	double time_taken;
-	unsigned long file_size;
-	unsigned short int padding;
-	int nThread = 2;
 
 	if (argc < 2) {
 		printf("You must provide at least 1 parameter, where you specify the action.");
@@ -105,11 +132,10 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Generate DES key set
-		short int bytes_written, process_mode;
+		short int bytes_written;
 		unsigned long block_count = 0, number_of_blocks;
 		unsigned char* data_block = (unsigned char*) malloc(8*sizeof(char));
 		unsigned char* processed_block = (unsigned char*) malloc(8*sizeof(char));
-		key_set* key_sets = (key_set*)malloc(17*sizeof(key_set));
 
 		start = clock();
 		generate_sub_keys(des_key, key_sets);
@@ -135,44 +161,54 @@ int main(int argc, char* argv[]) {
 		start = clock();
 
 		// Start reading input file, process and write to output file
-		vector<unsigned char*>::iterator it;
-		vector<unsigned char*> output;
-		vector<unsigned char*> input;
-		for (block_count = 0; block_count < number_of_blocks; block_count++) {
-			input.push_back(ucharmalloc);
-			fread(input.back(), 1, 8, input_file);
+		pthread_t thread[nThread];
+		unsigned long chunkSize = number_of_blocks / nThread;
+		for (int i = 0; i < nThread; i++) {
+			unsigned long start = chunkSize * i;
+			unsigned long end = start + chunkSize;
+			if (i == nThread - 1) {
+				end = number_of_blocks;
+			}
+			for (block_count = start; block_count < end; block_count++) {
+				input[i].push_back(ucharmalloc);
+				fread(input[i].back(), 1, 8, input_file);
+			}
 		}
 
-		// TODO: multi-thread
 		clock_t start_convert = clock();
-		for (it = input.begin(); it != input.end(); it++) {
-			if (it + 1 == input.end()) {
-				padding = 8 - file_size%8;
-				if (padding < 8) { // Fill empty data block bytes with padding
-					memset((*it + 8 - padding), (unsigned char)padding, padding);
-				}
-			}
-			output.push_back(ucharmalloc);
-			process_message(*it, output.back(), key_sets, process_mode);
+		// pthread_attr_t attr;
+		// void *status;
+		// pthread_attr_init(&attr);
+		// pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+		for(int i = 0; i < nThread; i++) {
+			pthread_create(&thread[i], NULL, converter, (void*) i);
+		}
+		// pthread_attr_destroy(&attr);
+
+		for(int i = 0; i < nThread; i++) {
+			pthread_join(thread[i], NULL);
 		}
 		clock_t end_convert = clock();
 		double time_convert_taken = (double)(end_convert - start_convert)/(double)CLOCKS_PER_SEC;
 		printf("[%lf seconds]\n", time_convert_taken);
-		// TODO: end multi-thread
 
-		for (it = output.begin(); it != output.end(); ++it) {
-			bytes_written = fwrite(*it, 1, 8, output_file);
-			delete *it;
+		vector<unsigned char*>::iterator it;
+		for (int i = 0; i < nThread; i++) {
+			for (it = output[i].begin(); it != output[i].end(); ++it) {
+				bytes_written = fwrite(*it, 1, 8, output_file);
+				delete *it;
+			}
 		}
-		for (it = input.begin(); it != input.end(); ++it) {
-			delete *it;
+		for (int i = 0; i < nThread; i++) {
+			for (it = input[i].begin(); it != input[i].end(); ++it) {
+				delete *it;
+			}
+			input[i].clear();
+			output[i].clear();
 		}
-		input.clear();
-		output.clear();
 
-		finish = clock();
-		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
-		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
+		// time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
+		// printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 
 		// Free up memory
 		free(des_key);
@@ -182,13 +218,14 @@ int main(int argc, char* argv[]) {
 		fclose(output_file);
 
 		// Provide feedback
+		finish = clock();
 		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
 		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
+		pthread_exit(NULL);
 		return 0;
 	} else {
 		printf("Invalid action: %s. First parameter must be [ -g | -e | -d ].", argv[1]);
 		return 1;
 	}
-
 	return 0;
 }
