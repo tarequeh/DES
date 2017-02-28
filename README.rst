@@ -16,8 +16,9 @@ Compilation & Installation
 ==========================
 This implementation has only been tested on Unix platform. But you may be able to compile/ run it on Windows.
 
-1. Make sure des.cpp, des.h and run_des.cpp are in the same directory
-2. Compile using: g++ -O3 des.cpp run_des.cpp -o run_des.o
+1. Make sure des.c, des.h and run_des.c are in the same directory
+2. Install pthread library
+3. Compile using: g++ -pthread des.cpp run_des.cpp -o run_des.o
 
 Usage
 =====
@@ -28,10 +29,10 @@ Say we want to encrypt/ decrypt a file named /home/user/sample.txt
     run_des.o -g /tmp/keyfile.key
 2. Encrypt sample.txt using::
 
-    run_des.o -e /tmp/keyfile.key /home/user/sample.txt /home/user/sample.enc
+    run_des.o -e /tmp/keyfile.key /home/user/sample.txt /home/user/sample.enc number_of_threads
 3. Decrypt sample.txt using::
 
-    run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt
+    run_des.o -d /tmp/keyfile.key /home/user/sample.enc /home/user/sample_decrypted.txt number_of_threads
 
 Don't lose the key file! you won't be able to decrypt an encrypted if you lose the keyfile.
 
@@ -50,15 +51,15 @@ It is possible to use this implementation to facilitate TripleDES encryption pro
 
 2. Encrypt using::
 
-    run_des.o -e /tmp/keyfile1.key /home/user/sample.txt /home/user/sample.enc1
-    run_des.o -e /tmp/keyfile2.key /home/user/sample.enc1 /home/user/sample.enc2
-    run_des.o -e /tmp/keyfile3.key /home/user/sample.enc2 /home/user/sample.enc3
+    run_des.o -e /tmp/keyfile1.key /home/user/sample.txt /home/user/sample.enc1 1
+    run_des.o -e /tmp/keyfile2.key /home/user/sample.enc1 /home/user/sample.enc2 2
+    run_des.o -e /tmp/keyfile3.key /home/user/sample.enc2 /home/user/sample.enc3 4
 
 3. Decrypt using::
 
-    run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3
-    run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2
-    run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt
+    run_des.o -d /tmp/keyfile3.key /home/user/sample.enc3 /home/user/sample.dec3 1
+    run_des.o -d /tmp/keyfile2.key /home/user/sample.dec3 /home/user/sample.dec2 2
+    run_des.o -d /tmp/keyfile1.key /home/user/sample.dec2 /home/user/sample_decrypted.txt 4
 
 The primary repository for DES is located at: `http://github.com/tarequeh/DES/ <http://github.com/tarequeh/DES/>`_ The blog post
 discussing the implementation can be found at: `CodeXN <http://www.codexn.com>`_
