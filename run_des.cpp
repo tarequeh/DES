@@ -52,7 +52,7 @@ void *converter(void* index) {
 		process_message(*it, output[i].back(), key_sets, process_mode);
 	}
 	clock_t finish = clock();
-	double time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
+	double time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
 	printf("thread[%ld] : %lf seconds\n", i, time_taken);
 	pthread_exit(NULL);
 }
@@ -61,6 +61,7 @@ int main(int argc, char* argv[]) {
 	clock_t start, finish;
 	double time_taken;
 
+	start = clock();
 	if (argc < 2) {
 		printf("You must provide at least 1 parameter, where you specify the action.");
 		return 1;
@@ -95,10 +96,11 @@ int main(int argc, char* argv[]) {
 		free(des_key);
 		fclose(key_file);
 	} else if ((strcmp(argv[1], ACTION_ENCRYPT) == 0) || (strcmp(argv[1], ACTION_DECRYPT) == 0)) { // Encrypt or decrypt
-		if (argc != 5) {
-			printf("Invalid # of parameters (%d) specified. Usage: run_des [-e|-d] keyfile.key input.file output.file", argc);
+		if (argc != 6) {
+			printf("Invalid # of parameters (%d) specified. Usage: run_des [-e|-d] keyfile.key input.file output.file [number_of_threads]", argc);
 			return 1;
 		}
+		nThread = atoi(argv[5]);
 
 		// Read key file
 		key_file = fopen(argv[2], "rb");
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
 		unsigned char* data_block = (unsigned char*) malloc(8*sizeof(char));
 		unsigned char* processed_block = (unsigned char*) malloc(8*sizeof(char));
 
-		start = clock();
+		// start = clock();
 		generate_sub_keys(des_key, key_sets);
 		finish = clock();
 		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
@@ -189,7 +191,7 @@ int main(int argc, char* argv[]) {
 			pthread_join(thread[i], NULL);
 		}
 		clock_t end_convert = clock();
-		double time_convert_taken = (double)(end_convert - start_convert)/(double)CLOCKS_PER_SEC;
+		double time_convert_taken = (double)(end_convert - start_convert)/(double)CLOCKS_PER_SEC/nThread;
 		printf("[%lf seconds]\n", time_convert_taken);
 
 		vector<unsigned char*>::iterator it;
@@ -219,7 +221,7 @@ int main(int argc, char* argv[]) {
 
 		// Provide feedback
 		finish = clock();
-		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
+		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
 		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 		pthread_exit(NULL);
 		return 0;
