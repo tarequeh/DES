@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <vector>
+#include <pthread.h>
 
 /*
  * des.h provides the following functions and constants:
@@ -11,6 +13,7 @@
  */
 #include "des.h"
 
+using namespace std;
 // Declare file handlers
 static FILE *key_file, *input_file, *output_file;
 
@@ -22,11 +25,41 @@ static FILE *key_file, *input_file, *output_file;
 // DES key is 8 bytes long
 #define DES_KEY_SIZE 8
 
+#define ucharmalloc (unsigned char*) malloc(8*sizeof(char))
+
+#define MAX_POSIBLE_THREADS 16
+
+short int process_mode;
+vector<unsigned char*> output[MAX_POSIBLE_THREADS];
+vector<unsigned char*> input[MAX_POSIBLE_THREADS];
+unsigned long file_size;
+key_set* key_sets = (key_set*)malloc(17*sizeof(key_set));
+int nThread = 1;
+
+void *converter(void* index) {
+	clock_t start = clock();
+	long i = (long) index;
+	unsigned short int padding;
+	vector<unsigned char*>::iterator it;
+	for (it = input[i].begin(); it != input[i].end(); it++) {
+		if (it + 1 == input[i].end() && i == nThread - 1) {
+			padding = 8 - file_size%8;
+			if (padding < 8) { // Fill empty data block bytes with padding
+				memset((*it + 8 - padding), (unsigned char)padding, padding);
+			}
+		}
+		output[i].push_back(ucharmalloc);
+		process_message(*it, output[i].back(), key_sets, process_mode);
+	}
+	clock_t finish = clock();
+	double time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
+	printf("thread[%ld] : %lf seconds\n", i, time_taken);
+	pthread_exit(NULL);
+}
+
 int main(int argc, char* argv[]) {
 	clock_t start, finish;
 	double time_taken;
-	unsigned long file_size;
-	unsigned short int padding;
 
 	if (argc < 2) {
 		printf("You must provide at least 1 parameter, where you specify the action.");
@@ -62,10 +95,11 @@ int main(int argc, char* argv[]) {
 		free(des_key);
 		fclose(key_file);
 	} else if ((strcmp(argv[1], ACTION_ENCRYPT) == 0) || (strcmp(argv[1], ACTION_DECRYPT) == 0)) { // Encrypt or decrypt
-		if (argc != 5) {
-			printf("Invalid # of parameters (%d) specified. Usage: run_des [-e|-d] keyfile.key input.file output.file", argc);
+		if (argc != 6) {
+			printf("Invalid # of parameters (%d) specified. Usage: run_des [-e|-d] keyfile.key input.file output.file [number_of_threads]", argc);
 			return 1;
 		}
+		nThread = atoi(argv[5]);
 
 		// Read key file
 		key_file = fopen(argv[2], "rb");
@@ -99,11 +133,10 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Generate DES key set
-		short int bytes_written, process_mode;
+		short int bytes_written;
 		unsigned long block_count = 0, number_of_blocks;
 		unsigned char* data_block = (unsigned char*) malloc(8*sizeof(char));
 		unsigned char* processed_block = (unsigned char*) malloc(8*sizeof(char));
-		key_set* key_sets = (key_set*)malloc(17*sizeof(key_set));
 
 		start = clock();
 		generate_sub_keys(des_key, key_sets);
@@ -129,39 +162,55 @@ int main(int argc, char* argv[]) {
 		start = clock();
 
 		// Start reading input file, process and write to output file
-		while(fread(data_block, 1, 8, input_file)) {
-			block_count++;
-			if (block_count == number_of_blocks) {
-				if (process_mode == ENCRYPTION_MODE) {
-					padding = 8 - file_size%8;
-					if (padding < 8) { // Fill empty data block bytes with padding
-						memset((data_block + 8 - padding), (unsigned char)padding, padding);
-					}
-
-					process_message(data_block, processed_block, key_sets, process_mode);
-					bytes_written = fwrite(processed_block, 1, 8, output_file);
-
-					if (padding == 8) { // Write an extra block for padding
-						memset(data_block, (unsigned char)padding, 8);
-						process_message(data_block, processed_block, key_sets, process_mode);
-						bytes_written = fwrite(processed_block, 1, 8, output_file);
-					}
-				} else {
-					process_message(data_block, processed_block, key_sets, process_mode);
-					padding = processed_block[7];
-
-					if (padding < 8) {
-						bytes_written = fwrite(processed_block, 1, 8 - padding, output_file);
-					}
-				}
-			} else {
-				process_message(data_block, processed_block, key_sets, process_mode);
-				bytes_written = fwrite(processed_block, 1, 8, output_file);
+		pthread_t thread[nThread];
+		unsigned long chunkSize = number_of_blocks / nThread;
+		for (int i = 0; i < nThread; i++) {
+			unsigned long start = chunkSize * i;
+			unsigned long end = start + chunkSize;
+			if (i == nThread - 1) {
+				end = number_of_blocks;
 			}
-			memset(data_block, 0, 8);
+			for (block_count = start; block_count < end; block_count++) {
+				input[i].push_back(ucharmalloc);
+				fread(input[i].back(), 1, 8, input_file);
+			}
+		}
+
+		clock_t start_convert = clock();
+		// pthread_attr_t attr;
+		// void *status;
+		// pthread_attr_init(&attr);
+		// pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+		for(int i = 0; i < nThread; i++) {
+			pthread_create(&thread[i], NULL, converter, (void*) i);
+		}
+		// pthread_attr_destroy(&attr);
+
+		for(int i = 0; i < nThread; i++) {
+			pthread_join(thread[i], NULL);
+		}
+		clock_t end_convert = clock();
+		double time_convert_taken = (double)(end_convert - start_convert)/(double)CLOCKS_PER_SEC/nThread;
+		printf("[%lf seconds]\n", time_convert_taken);
+
+		vector<unsigned char*>::iterator it;
+		for (int i = 0; i < nThread; i++) {
+			for (it = output[i].begin(); it != output[i].end(); ++it) {
+				bytes_written = fwrite(*it, 1, 8, output_file);
+				delete *it;
+			}
+		}
+		for (int i = 0; i < nThread; i++) {
+			for (it = input[i].begin(); it != input[i].end(); ++it) {
+				delete *it;
+			}
+			input[i].clear();
+			output[i].clear();
 		}
 
 		finish = clock();
+		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC/nThread;
+		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 
 		// Free up memory
 		free(des_key);
@@ -169,15 +218,12 @@ int main(int argc, char* argv[]) {
 		free(processed_block);
 		fclose(input_file);
 		fclose(output_file);
-
+		pthread_exit(NULL);
 		// Provide feedback
-		time_taken = (double)(finish - start)/(double)CLOCKS_PER_SEC;
-		printf("Finished processing %s. Time taken: %lf seconds.\n", argv[3], time_taken);
 		return 0;
 	} else {
 		printf("Invalid action: %s. First parameter must be [ -g | -e | -d ].", argv[1]);
 		return 1;
 	}
-
 	return 0;
 }
