@@ -1,0 +1,7 @@
+gcc -O3 des.c run_des.c -o run_des.o
+
+./run_des.o -g keyfile.key
+
+./run_des.o -e keyfile.key sample.txt sample.enc
+
+./run_des.o -d keyfile.key sample.enc sample_decrypted.txt
